@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>南方科技大学综评招生（广东省）综合成绩计算器</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://s4.zstatic.net/ajax/libs/font-awesome/7.0.1/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        /* Custom Styles */
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            min-height: 100vh;
+        }
+
+        /* Smooth transitions */
+        .transition-all-300 {
+            transition: all 0.3s ease;
+        }
+
+        /* Input styling overrides */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        /* Error state animation */
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        /* Toast Notification */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            background: white;
+            border-left: 4px solid #3b82f6;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transform: translateX(100%);
+            opacity: 0;
+            transition: all 0.4s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.95rem;
+            color: #334155;
+        }
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        .toast.success { border-left-color: #22c55e; }
+        .toast.error { border-left-color: #ef4444; }
+
+        /* Xuekao Square Inputs */
+        .xuekao-input {
+            width: 3rem;
+            height: 3rem;
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        @media (max-width: 640px) {
+            .xuekao-input {
+                width: 2.5rem;
+                height: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body class="text-slate-800 pb-20">
+
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-40 border-b border-slate-200">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white text-xl shadow-lg shadow-blue-200">
+                    <i class="fa-solid fa-calculator"></i>
+                </div>
+                <h1 class="text-lg md:text-xl font-bold text-slate-800 leading-tight">
+                    南方科技大学综评招生<br class="md:hidden"><span class="text-blue-600">（广东省）综合成绩计算器</span>
+                </h1>
+            </div>
+            <!-- Mobile only hint -->
+            <div class="md:hidden text-xs text-slate-400">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 py-8">
+        
+        <!-- Groups Container -->
+        <div id="groups-container" class="space-y-6">
+            <!-- Groups will be injected here via JS -->
+        </div>
+
+        <!-- Add Button -->
+        <div class="mt-8 flex justify-center">
+            <button id="add-group-btn" class="group relative inline-flex items-center justify-center px-8 py-3 text-base font-medium text-white bg-blue-600 rounded-full shadow-lg shadow-blue-300 hover:bg-blue-700 hover:shadow-blue-400 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i class="fa-solid fa-plus mr-2 transition-transform group-hover:rotate-90"></i>
+                添加一组数据
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Template for a Group (Hidden, used by JS) -->
+    <template id="group-template">
+        <div class="group-card bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden transition-all-300 hover:shadow-2xl relative">
+            <!-- Card Header -->
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <span class="font-bold text-slate-700 flex items-center gap-2">
+                    <i class="fa-regular fa-id-card text-blue-500"></i>
+                    数据组 <span class="group-index text-blue-600">1</span>
+                </span>
+                <div class="flex gap-2">
+                    <button class="copy-btn-top text-xs bg-white border border-slate-300 hover:border-blue-500 hover:text-blue-600 text-slate-600 px-3 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-1">
+                        <i class="fa-regular fa-copy"></i> 复制
+                    </button>
+                    <button class="delete-btn text-xs bg-white border border-slate-300 hover:border-red-500 hover:text-red-600 text-slate-600 px-3 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-1">
+                        <i class="fa-regular fa-trash-can"></i> 删除
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card Body -->
+            <div class="p-6 space-y-6">
+                
+                <!-- Row 1: Main Scores -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Gaokao -->
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-slate-600 mb-2">
+                            高考成绩 <span class="text-xs text-slate-400 font-normal">(满分750)</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" step="any" class="score-input w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-700 font-medium" data-type="gaokao" placeholder="0-750">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400 text-xs">
+                                /750
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Computer Test -->
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-slate-600 mb-2">
+                            机试成绩 <span class="text-xs text-slate-400 font-normal">(满分100)</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" step="any" class="score-input w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-700 font-medium" data-type="jishi" placeholder="0-100">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400 text-xs">
+                                /100
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Interview -->
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-slate-600 mb-2">
+                            面试成绩 <span class="text-xs text-slate-400 font-normal">(满分100)</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" step="any" class="score-input w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-700 font-medium" data-type="mianshi" placeholder="0-100">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400 text-xs">
+                                /100
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 2: Xuekao & Quality -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                    <!-- Xuekao -->
+                    <div class="form-group bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                        <label class="block text-sm font-medium text-slate-600 mb-3">
+                            学考成绩 <span class="text-xs text-slate-400 font-normal">(共6科，填数量)</span>
+                        </label>
+                        <div class="flex flex-wrap items-center justify-center gap-2 md:gap-4 text-slate-500 font-bold text-lg">
+                            <div class="flex flex-col items-center gap-1">
+                                <label class="text-xs text-slate-400">A</label>
+                                <input type="number" class="xuekao-input score-input rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-blue-600" data-type="xk-a" min="0" max="6">
+                            </div>
+                            <div class="flex flex-col items-center gap-1">
+                                <label class="text-xs text-slate-400">B</label>
+                                <input type="number" class="xuekao-input score-input rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-blue-600" data-type="xk-b" min="0" max="6">
+                            </div>
+                            <div class="flex flex-col items-center gap-1">
+                                <label class="text-xs text-slate-400">C</label>
+                                <input type="number" class="xuekao-input score-input rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-blue-600" data-type="xk-c" min="0" max="6">
+                            </div>
+                            <div class="flex flex-col items-center gap-1">
+                                <label class="text-xs text-slate-400">D</label>
+                                <input type="number" class="xuekao-input score-input rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-blue-600" data-type="xk-d" min="0" max="6">
+                            </div>
+                        </div>
+                        <div class="text-center mt-2 text-xs text-slate-400">
+                            总和需为 6
+                        </div>
+                    </div>
+
+                    <!-- Quality -->
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-slate-600 mb-2">
+                            综合素质 <span class="text-xs text-slate-400 font-normal">(满分3)</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" step="any" class="score-input w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-700 font-medium" data-type="suzhi" placeholder="0-3">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400 text-xs">
+                                /3
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Result Footer -->
+                <div class="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-blue-50/30 rounded-xl p-4">
+                    <div class="w-full sm:w-auto text-center sm:text-left">
+                        <span class="text-sm text-slate-500 block mb-1">综合成绩</span>
+                        <div class="result-display text-3xl font-extrabold text-slate-300 tracking-tight" data-valid="false">
+                            --.----
+                        </div>
+                    </div>
+                    <button class="copy-btn-bottom w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl shadow-md shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2 font-medium">
+                        <i class="fa-regular fa-share-from-square"></i> 复制分享
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </template>
+
+    <script>
+        // State Management
+        let groupCount = 0;
+        const container = document.getElementById('groups-container');
+        const template = document.getElementById('group-template');
+        const addBtn = document.getElementById('add-group-btn');
+
+        // Constants for Calculation
+        const MAX_GAOKAO = 750;
+        const MAX_JISHI = 100;
+        const MAX_MIANSHI = 100;
+        const MAX_SUZHI = 3;
+        const TOTAL_SUBJECTS = 6;
+
+        // Initial Values
+        const INITIAL_VALUES = {
+            gaokao: 750,
+            jishi: 100,
+            mianshi: 100,
+            'xk-a': 6,
+            'xk-b': 0,
+            'xk-c': 0,
+            'xk-d': 0,
+            suzhi: 3
+        };
+
+        // --- Core Functions ---
+
+        /**
+         * Create a new data group card
+         */
+        function addGroup() {
+            groupCount++;
+            const clone = template.content.cloneNode(true);
+            const card = clone.querySelector('.group-card');
+            
+            // Set Index
+            card.querySelector('.group-index').textContent = groupCount;
+            card.dataset.id = groupCount;
+
+            // Set Initial Values
+            const inputs = card.querySelectorAll('.score-input');
+            inputs.forEach(input => {
+                const type = input.dataset.type;
+                if (INITIAL_VALUES.hasOwnProperty(type)) {
+                    input.value = INITIAL_VALUES[type];
+                }
+            });
+
+            // Bind Events
+            bindCardEvents(card);
+
+            // Append
+            container.appendChild(card);
+
+            // Trigger calculation immediately
+            calculateAndValidate(card);
+        }
+
+        /**
+         * Bind events for a specific card
+         */
+        function bindCardEvents(card) {
+            const inputs = card.querySelectorAll('.score-input');
+            const deleteBtn = card.querySelector('.delete-btn');
+            const copyTopBtn = card.querySelector('.copy-btn-top');
+            const copyBottomBtn = card.querySelector('.copy-btn-bottom');
+
+            // Input changes
+            inputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    calculateAndValidate(card);
+                });
+            });
+
+            // Delete
+            deleteBtn.addEventListener('click', () => {
+                if (container.children.length > 1) {
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.9)';
+                    setTimeout(() => {
+                        card.remove();
+                        updateIndices();
+                    }, 300);
+                } else {
+                    showToast('至少保留一组数据', 'error');
+                }
+            });
+
+            // Copy Top
+            copyTopBtn.addEventListener('click', () => {
+                copyResult(card);
+            });
+
+            // Copy Bottom
+            copyBottomBtn.addEventListener('click', () => {
+                copyResult(card);
+            });
+        }
+
+        /**
+         * Update indices after deletion
+         */
+        function updateIndices() {
+            const cards = container.querySelectorAll('.group-card');
+            cards.forEach((card, index) => {
+                card.querySelector('.group-index').textContent = index + 1;
+            });
+            groupCount = cards.length;
+        }
+
+        /**
+         * Validate inputs and Calculate Score
+         */
+        function calculateAndValidate(card) {
+            const inputs = card.querySelectorAll('.score-input');
+            let isValid = true;
+            const data = {};
+
+            // 1. Gather Data & Basic Validation
+            inputs.forEach(input => {
+                const type = input.dataset.type;
+                const val = parseFloat(input.value);
+                
+                // Reset styles
+                input.classList.remove('border-red-500', 'bg-red-50', 'text-red-600', 'shake');
+                input.classList.add('border-slate-300');
+
+                // Check empty
+                if (input.value === '') {
+                    isValid = false;
+                    markError(input);
+                    return;
+                }
+
+                // Check Range
+                let max = 0;
+                if (type === 'gaokao') max = MAX_GAOKAO;
+                else if (type === 'jishi') max = MAX_JISHI;
+                else if (type === 'mianshi') max = MAX_MIANSHI;
+                else if (type === 'suzhi') max = MAX_SUZHI;
+                else if (type.startsWith('xk-')) max = TOTAL_SUBJECTS;
+
+                if (val < 0 || val > max) {
+                    isValid = false;
+                    markError(input);
+                    return;
+                }
+
+                data[type] = val;
+            });
+
+            // 2. Specific Logic: Xuekao Sum
+            const xkSum = (data['xk-a'] || 0) + (data['xk-b'] || 0) + (data['xk-c'] || 0) + (data['xk-d'] || 0);
+            if (Math.abs(xkSum - TOTAL_SUBJECTS) > 0.001) {
+                isValid = false;
+                // Mark all Xuekao inputs red
+                const xkInputs = card.querySelectorAll('.xuekao-input');
+                xkInputs.forEach(inp => markError(inp));
+            }
+
+            // 3. Calculate Result
+            const resultDisplay = card.querySelector('.result-display');
+            
+            if (isValid) {
+                // Formulas
+                const gkScore = data.gaokao / MAX_GAOKAO * 60;
+                const jsScore = data.jishi / MAX_JISHI * 25;
+                const msScore = data.mianshi / MAX_MIANSHI * 5;
+                
+                // Xuekao Formula: 7*A/6 + 6.5*B/6 + 6*C/6 + 5.5*D/6
+                const xkScore = (7 * data['xk-a'] + 6.5 * data['xk-b'] + 6 * data['xk-c'] + 5.5 * data['xk-d']) / 6;
+                
+                const szScore = data.suzhi;
+
+                const total = gkScore + jsScore + msScore + xkScore + szScore;
+
+                // Update UI
+                resultDisplay.textContent = total.toFixed(4);
+                resultDisplay.classList.remove('text-slate-300');
+                resultDisplay.classList.add('text-blue-600');
+                
+                // Store raw data for copy
+                card.dataset.result = total.toFixed(4);
+                card.dataset.gkRaw = data.gaokao;
+                card.dataset.jsRaw = data.jishi;
+                card.dataset.msRaw = data.mianshi;
+                card.dataset.xkRaw = xkScore.toFixed(4); // Or formatted as needed
+                card.dataset.szRaw = data.suzhi;
+
+            } else {
+                // Invalid State
+                resultDisplay.textContent = '--.----';
+                resultDisplay.classList.remove('text-blue-600');
+                resultDisplay.classList.add('text-slate-300');
+                delete card.dataset.result;
+            }
+        }
+
+        /**
+         * Mark input as error
+         */
+        function markError(input) {
+            input.classList.remove('border-slate-300');
+            input.classList.add('border-red-500', 'bg-red-50', 'text-red-600', 'shake');
+            // Remove animation class after it runs so it can run again
+            setTimeout(() => input.classList.remove('shake'), 500);
+        }
+
+        /**
+         * Copy result to clipboard
+         */
+        function copyResult(card) {
+            // Check if valid
+            if (!card.dataset.result) {
+                showToast('请先填写正确的数据', 'error');
+                return;
+            }
+
+            const text = `南科大综合成绩：${card.dataset.result}
+高考：${card.dataset.gkRaw}
+机试：${card.dataset.jsRaw}
+面试：${card.dataset.msRaw}
+学考：${card.dataset.xkRaw}
+综合素质：${card.dataset.szRaw}
+南方科技大学综评招生（广东省）综合成绩计算器 SUSTech-Calculator.netlify.app`;
+
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('复制成功！', 'success');
+            }).catch(err => {
+                console.error('Copy failed', err);
+                showToast('复制失败，请手动复制', 'error');
+            });
+        }
+
+        /**
+         * Show Toast Notification
+         */
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            let icon = type === 'success' ? '<i class="fa-solid fa-check-circle text-green-500 text-lg"></i>' : '<i class="fa-solid fa-circle-exclamation text-red-500 text-lg"></i>';
+
+            toast.innerHTML = `${icon}<span>${message}</span>`;
+            
+            container.appendChild(toast);
+
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+
+            // Remove after 3s
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.addEventListener('transitionend', () => {
+                    toast.remove();
+                });
+            }, 3000);
+        }
+
+        // --- Initialization ---
+        addBtn.addEventListener('click', addGroup);
+        
+        // Add first group on load
+        window.addEventListener('DOMContentLoaded', () => {
+            addGroup();
+        });
+
+    </script>
+</body>
+</html>
